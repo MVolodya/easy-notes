@@ -33,6 +33,7 @@ export default class Textarea extends Component {
     return (
       <textarea
         className="textarea"
+        readOnly={this.props.isReadonly}
         value={this.state.text}
         onChange={this.handleChange}
         ref={(ref) => { this.area = ref; }}

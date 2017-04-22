@@ -34,16 +34,49 @@ class App extends _react.Component {
   }
 
   componentWillMount() {
+    this.loadList();
+  }
+
+  loadList(active = this.state.active) {
     (0, _general.readDir)('/notes', data => {
       this.loaded = true;
 
       this.setState({
-        files: data
+        files: data,
+        active
       });
     });
   }
 
-  loadActiveNote(name) {
+  createNote() {
+    const name = 'A wonderful new note ' + (this.state.files.length + 1);
+    const rawName = name.split(' ').join('-') + '.txt';
+
+    (0, _general.appendFile)(`/notes/${rawName}`, () => {
+      this.loadList();
+      this.loadNote(`${rawName}`);
+    });
+  }
+
+  deleteNote(fileName) {
+    if (!confirm('Are you sure you want to delete note?')) {
+      return;
+    }
+
+    (0, _general.unlink)(`/notes/${fileName}`, () => {
+      this.loadList(null);
+    });
+  }
+
+  loadNote(name) {
+    if (name === null) {
+      this.setState({
+        text: '',
+        active: null
+      });
+      return;
+    }
+
     (0, _general.readFile)(`/notes/${name}`, data => {
       this.setState({
         text: data,
@@ -54,6 +87,7 @@ class App extends _react.Component {
 
   render() {
     if (!this.loaded) return null;
+    const isReadonly = !this.state.files.length;
 
     return _react2.default.createElement(
       'div',
@@ -66,14 +100,18 @@ class App extends _react.Component {
           { className: 'col-small' },
           _react2.default.createElement(_List2.default, {
             files: this.state.files,
-            loadActiveNote: this.loadActiveNote.bind(this),
-            active: this.state.active
+            loadNote: this.loadNote.bind(this),
+            createNote: this.createNote.bind(this),
+            deleteNote: this.deleteNote.bind(this),
+            active: this.state.active,
+            loadList: this.loadList.bind(this)
           })
         ),
         _react2.default.createElement(
           'div',
           { className: 'col-big' },
           _react2.default.createElement(_Textarea2.default, {
+            isReadonly: isReadonly,
             data: this.state.text,
             active: this.state.active
           })
@@ -95,21 +133,46 @@ var _react = require('react');
 
 var _react2 = _interopRequireDefault(_react);
 
+var _general = require('../general');
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 class List extends _react.Component {
-  constructor(props) {
-    super(props);
+
+  saveItemName(input, rawName) {
+    const newName = input.value.split(' ').join('-') + '.txt';
+
+    (0, _general.rename)(`/notes/${rawName}`, `/notes/${newName}`, this.props.loadList);
+    input.setAttribute('readonly', true);
+    input.removeEventListener('blur', this.saveItemName.bind(this, input));
+    // input.removeEventListener('keyup', (e) => {
+    //   if (e.which === 13) {
+    //     this.saveItemName(input, rawName);
+    //   }
+    // });
+  }
+
+  handleRename(input, rawName) {
+    input.removeAttribute('readonly');
+    input.focus();
+
+    input.addEventListener('blur', this.saveItemName.bind(this, input, rawName));
+    // input.addEventListener('keyup', (e) => {
+    //   if (e.which === 13) {
+    //     this.saveItemName(input, rawName);
+    //   }
+    // });
   }
 
   renderList() {
     return this.props.files.map((rawName, i) => {
-      const name = rawName.replace('.txt', '');
+      const name = rawName.replace('.txt', '').split('-').join(' ');
       let isActive = false;
+      let inputRef;
 
       if (i === 0 && this.props.active === null) {
         isActive = true;
-        this.props.loadActiveNote(rawName);
+        this.props.loadNote(rawName);
       } else if (this.props.active === rawName) {
         isActive = true;
       }
@@ -120,10 +183,32 @@ class List extends _react.Component {
           key: `key-${name}`,
           className: isActive ? 'active' : '',
           onClick: () => {
-            this.props.loadActiveNote(rawName);
+            this.props.loadNote(rawName);
           }
         },
-        name
+        _react2.default.createElement('input', {
+          type: 'text',
+          className: 'note',
+          defaultValue: name,
+          readOnly: true,
+          ref: ref => {
+            inputRef = ref;
+          }
+        }),
+        _react2.default.createElement('button', {
+          className: 'rename-note',
+          onClick: e => {
+            e.stopPropagation();
+            this.handleRename(inputRef, rawName);
+          }
+        }),
+        _react2.default.createElement('button', {
+          onClick: e => {
+            e.stopPropagation();
+            this.props.deleteNote(rawName);
+          },
+          className: 'delete-note'
+        })
       );
     });
   }
@@ -132,13 +217,17 @@ class List extends _react.Component {
     return _react2.default.createElement(
       'ul',
       { className: 'notes' },
-      this.renderList()
+      this.renderList(),
+      _react2.default.createElement('button', {
+        onClick: this.props.createNote,
+        className: 'add-note'
+      })
     );
   }
 }
 exports.default = List;
 
-},{"react":182}],3:[function(require,module,exports){
+},{"../general":4,"react":182}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -183,6 +272,7 @@ class Textarea extends _react.Component {
   render() {
     return _react2.default.createElement('textarea', {
       className: 'textarea',
+      readOnly: this.props.isReadonly,
       value: this.state.text,
       onChange: this.handleChange,
       ref: ref => {
@@ -220,6 +310,43 @@ const writeFile = exports.writeFile = (filePath, data, callback) => {
   const file = path.join(_.__dirname + filePath);
 
   fs.writeFile(file, data, err => {
+    if (err) throw err;
+
+    if (typeof callback == 'function') {
+      callback();
+    }
+  });
+};
+
+const rename = exports.rename = (oldPath, newPath, callback) => {
+  const oldP = path.join(_.__dirname + oldPath);
+  const newP = path.join(_.__dirname + newPath);
+
+  fs.rename(oldP, newP, err => {
+    if (err) throw err;
+
+    if (typeof callback == 'function') {
+      callback();
+    }
+  });
+};
+
+const unlink = exports.unlink = (filePath, callback) => {
+  const file = path.join(_.__dirname + filePath);
+
+  fs.unlink(file, err => {
+    if (err) throw err;
+
+    if (typeof callback == 'function') {
+      callback();
+    }
+  });
+};
+
+const appendFile = exports.appendFile = (filePath, callback) => {
+  const file = path.join(_.__dirname + filePath);
+
+  fs.appendFile(file, '', err => {
     if (err) throw err;
 
     if (typeof callback == 'function') {

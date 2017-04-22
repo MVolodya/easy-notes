@@ -10,7 +10,7 @@
   font-weight: 400;
 }
 
-$font-color: #0a1c27;
+$font-color: #212121;
 $background-color: #fbfbfd;
 $active-note: #930424;
 $non-active-note: #f7ebef;
@@ -39,11 +39,25 @@ html, body, #root, .wrapper, .wrapper > .row {
 }
 
 .col-small {
-  width: 20%;
+  width: 25%;
 }
 
 .col-big {
-  width: 80%;
+  width: 75%;
+}
+
+.note {
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: Roboto, sans-serif;
+  font-size: 16px;
+  color: $font-color;
+  outline: none;
+
+  &[readonly] {
+    cursor: pointer;
+  }
 }
 
 .textarea {
@@ -71,17 +85,52 @@ html, body, #root, .wrapper, .wrapper > .row {
   margin: 0;
   padding: 0;
   height: 100%;
-  background-color: $non-active-note;
+  border-right: 1px solid $non-active-note;
 
   li {
     cursor: pointer;
     padding: 20px 30px;
     border-left: 4px solid $non-active-note;
-    background-color: $non-active-note;
+    background-color: $background-color;
+    position: relative;
 
     &.active {
       border-color: $active-note;
       background-color: #f3d4d9;
     }
   }
+}
+
+.add-note, .delete-note {
+  display: block;
+  background-position: 50% 50%;
+  padding: 0;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-color: transparent;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  opacity: .3;
+  transition: opacity 0.5s;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.add-note {
+  background-image: url(../assets/add.svg);
+  width: 100px;
+  height: 100px;
+  margin: 30px auto;
+}
+
+.delete-note {
+  background-image: url(../assets/garbage.svg);
+  width: 20px;
+  height: 20px;
+  position: absolute;
+  top: 30px;
+  right: 5px;
 }

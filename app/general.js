@@ -27,6 +27,43 @@ export const writeFile = (filePath, data, callback) => {
   });
 };
 
+export const rename = (oldPath, newPath, callback) => {
+  const oldP = path.join(_.__dirname + oldPath);
+  const newP = path.join(_.__dirname + newPath);
+
+  fs.rename(oldP, newP, (err) => {
+    if (err) throw err;
+
+    if (typeof callback == 'function') {
+      callback();
+    }
+  });
+};
+
+export const unlink = (filePath, callback) => {
+  const file = path.join(_.__dirname + filePath);
+
+  fs.unlink(file, (err) => {
+    if (err) throw err;
+
+    if (typeof callback == 'function') {
+      callback();
+    }
+  })
+};
+
+export const appendFile = (filePath, callback) => {
+  const file = path.join(_.__dirname + filePath);
+
+  fs.appendFile(file, '', (err) => {
+    if (err) throw err;
+
+    if (typeof callback == 'function') {
+      callback();
+    }
+  })
+};
+
 export const readDir = (filePath, callback) => {
   const file = path.join(_.__dirname + filePath);
 
