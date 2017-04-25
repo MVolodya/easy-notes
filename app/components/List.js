@@ -30,28 +30,33 @@ export default class List extends Component {
   }
 
   renderList() {
-    return this.props.files.map((rawName, i) => {
-      const name = rawName.replace('.txt', '').split('-').join(' ');
+    const data = this.props.data;
+    if (!data) return;
+
+    const notes = [];
+
+    for (let key in data) {
+      const note = data[key];
       let isActive = false;
       let inputRef;
 
-      if (i === 0 && this.props.active === null) {
-        isActive = true;
-        this.props.loadNote(rawName);
-      } else if (this.props.active === rawName) {
+      if (this.props.active !== null && this.props.active.id === note.id) {
         isActive = true;
       }
 
-      return (
+      notes.push(
         <li
-          key={`key-${name}`}
+          key={`key-${note.id}`}
           className={isActive ? 'active' : ''}
-          onClick={() => { this.props.loadNote(rawName); }}
+          onClick={() => { this.props.loadNote(note.id); }}
         >
+          <span className="date">
+            {new Date(note.date).toLocaleDateString('en-GB').split('/').join('-')}
+          </span>
           <input
             type="text"
             className="note"
-            defaultValue={name}
+            defaultValue={note.name}
             readOnly
             ref={(ref) => { inputRef = ref; }}
           />
@@ -59,19 +64,21 @@ export default class List extends Component {
             className="rename-note"
             onClick={(e) => {
               e.stopPropagation();
-              this.handleRename(inputRef, rawName);
+              this.handleRename(inputRef, note.id);
             }}
           />
           <button
             onClick={(e) => {
               e.stopPropagation();
-              this.props.deleteNote(rawName)
+              this.props.deleteNote(note.id)
             }}
             className="delete-note"
           />
         </li>
-      );
-    });
+      )
+    }
+
+    return notes;
   }
 
   render() {

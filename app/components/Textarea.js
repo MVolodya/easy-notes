@@ -1,32 +1,49 @@
 import React, { Component } from 'react';
-import { writeFile } from '../general';
 
 
 export default class Textarea extends Component {
   constructor(props) {
     super(props);
 
+
     this.state = {
-      text: this.props.data
+      text: this.props.active.text
     };
 
     this.handleChange = this.handleChange.bind(this);
   }
 
   componentWillReceiveProps(nextProps) {
-    if (this.props.active !== nextProps.active) {
+    // TODO: fix this shit
+    if (nextProps.active === null || this.props.active === null) {
       this.setState({
-        text: nextProps.data
+        text: ''
+      });
+
+      return;
+    }
+
+    if (this.props.active.id !== nextProps.active.id) {
+      this.setState({
+        text: nextProps.active.text
       });
       this.area.focus();
     }
   }
 
+  componentDidUpdate() {
+    this.area.dispatchEvent(new CustomEvent('textareaUpdated'));
+  }
+
   handleChange(e) {
-    writeFile(`/notes/${this.props.active}`, e.target.value);
-    this.setState({
-      text: e.target.value
-    });
+    const text = e.target.value;
+
+    this.setState({ text });
+
+    const active = this.props.active;
+    const newActive = Object.assign({}, this.props.active, { text });
+
+    localStorage[active.id] = JSON.stringify(newActive);
   }
 
   render() {
@@ -34,7 +51,7 @@ export default class Textarea extends Component {
       <textarea
         className="textarea"
         readOnly={this.props.isReadonly}
-        value={this.state.text}
+        value={this.state.text || ''}
         onChange={this.handleChange}
         ref={(ref) => { this.area = ref; }}
       />

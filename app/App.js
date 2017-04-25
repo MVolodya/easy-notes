@@ -1,83 +1,92 @@
 import React, { Component } from 'react';
 import Textarea from './components/Textarea';
 import List from './components/List';
-import { readFile, readDir, appendFile, unlink } from './general';
+import Search from './components/Search';
+import Speech from './components/Speech';
+import Info from './components/Info';
+import { readFile, readDir, appendFile, SHEMA } from './general';
 
 
 export default class App extends Component {
   constructor() {
     super();
 
-    this.loaded = false;
+    const data = this.getData();
+
     this.state = {
-      text: '',
-      files: [],
-      active: null
+      active: data ? data[Object.keys(data)[0]] : SHEMA,
+      data
     }
   }
 
-  componentWillMount() {
-    this.loadList();
+  loadList(active = this.state.active) {
+    this.setState({
+      data: this.getData(),
+      active
+    });
   }
 
-  loadList(active = this.state.active) {
-    readDir('/notes', (data) => {
-      this.loaded = true;
+  getData() {
+    let data = {};
 
-      this.setState({
-        files: data,
-        active
-      });
-    });
+    if (!localStorage.length) return null;
+
+    for (let key in localStorage) {
+      data[key] = JSON.parse(localStorage[key]);
+    }
+
+    return data;
   }
 
   createNote() {
-    const name = 'A wonderful new note ' + (this.state.files.length + 1);
-    const rawName = name.split(' ').join('-') + '.txt';
+    const id = Date.now();
+    const name = 'A wonderful new note';
+    const date = new Date();
 
-    appendFile(`/notes/${rawName}`, () => {
-      this.loadList();
-      this.loadNote(`${rawName}`);
-    });
+    localStorage[id] = JSON.stringify(Object.assign({}, SHEMA, {
+      id,
+      name,
+      date
+    }));
+
+    this.loadList();
   }
 
-  deleteNote(fileName) {
+  deleteNote(noteId) {
     if (!confirm('Are you sure you want to delete note?')) {
       return;
     }
 
-    unlink(`/notes/${fileName}`, () => {
-      this.loadList(null);
-    });
+    delete localStorage[noteId];
+    this.loadList();
+    this.loadNote(null);
   }
 
-  loadNote(name) {
-    if (name === null) {
+  loadNote(noteId) {
+    if (noteId === null) {
       this.setState({
-        text: '',
         active: null,
       });
       return;
     }
 
-    readFile(`/notes/${name}`, (data) => {
-      this.setState({
-        text: data,
-        active: name
-      });
+    this.loadList();
+
+    this.setState({
+      active: this.state.data[noteId]
     });
   }
 
   render() {
-    if (!this.loaded) return null;
-    const isReadonly = !this.state.files.length;
+    const isReadonly = !this.state.data || !this.state.active;
 
     return (
       <div className="wrapper">
         <div className="row">
           <div className="col-small">
+            <Search />
             <List
-              files={this.state.files}
+              data={this.state.data}
               loadNote={this.loadNote.bind(this)}
               createNote={this.createNote.bind(this)}
               deleteNote={this.deleteNote.bind(this)}
@@ -87,10 +96,11 @@ export default class App extends Component {
           </div>
           <div className="col-big">
             <Textarea
+              data={this.state.data}
               isReadonly={isReadonly}
-              data={this.state.text}
               active={this.state.active}
             />
+            <Info />
           </div>
         </div>
       </div>

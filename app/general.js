@@ -75,3 +75,11 @@ export const readDir = (filePath, callback) => {
     }
   });
 };
+
+
+export const SHEMA = {
+  id: null,
+  name: null,
+  date: null,
+  text: null
+}
